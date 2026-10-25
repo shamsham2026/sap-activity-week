@@ -116,28 +116,15 @@ async function writeGithub(store: StoreShape, sha: string | null): Promise<strin
 async function persist(store: StoreShape): Promise<void> {
   store.updatedAt = new Date().toISOString();
   if (githubStoreEnabled()) {
-    let sha = globalThis.__hujiangAwSha ?? null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        globalThis.__hujiangAwSha = await writeGithub(store, sha);
-        globalThis.__hujiangAwSubs = clone(store);
-        return;
-      } catch (err) {
-        const status = (err as { status?: number }).status;
-        if (status !== 409) throw new Error(friendlyGitHubError(err));
-        // 有人喺我哋寫入之前改咗個檔：攞返最新版本再寫多次。
-        const fresh = await readGithub();
-        if (!fresh) throw new Error(friendlyGitHubError(err));
-        sha = fresh.sha;
-        globalThis.__hujiangAwSha = sha;
-      }
-    }
-    throw new Error("GitHub store 寫入衝突，請稍後再試");
-  }
-  if (process.env.VERCEL) {
+    // 直接寫；撞到 409 就交返俾 mutate() 重讀再試。
+    // （之前呢度自己重試，但用緊一份舊 snapshot 寫，
+    //   會蓋咗對方啱啱寫入嘅另一筆登記。）
+    globalThis.__hujiangAwSha = await writeGithub(store, globalThis.__hujiangAwSha ?? null);
+  } else if (process.env.VERCEL) {
     throw new Error("GitHub store 未設定（GITHUB_STORE_TOKEN）");
+  } else {
+    await writeLocal(store);
   }
-  await writeLocal(store);
   globalThis.__hujiangAwSubs = clone(store);
 }
 
@@ -167,6 +154,44 @@ async function load(): Promise<StoreShape> {
   const store = fromLocal ?? emptyStore();
   globalThis.__hujiangAwSubs = store;
   return clone(store);
+}
+
+/**
+ * 改資料嘅統一入口：每次都重讀最新版本，套用改動，再寫返。
+ *
+ * 公開登記站（呢個 project）同管理平台都寫同一個 GitHub store 檔，
+ * 所以唔可以攞住一份舊 snapshot 就成份寫返去，
+ * 否則會蓋咗另一邊啱啱登記／修改嘅內容。
+ *
+ * 如果寫入時撞到人改（409），就重讀最新版本再重新套用同一個改動。
+ */
+async function mutate<T>(
+  apply: (store: StoreShape) => T | Promise<T>,
+): Promise<T> {
+  if (!githubStoreEnabled()) {
+    const store = await load();
+    const result = await apply(store);
+    await persist(store);
+    return result;
+  }
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    // 每次都重讀，確保改動係基於最新版本。
+    const store = await load();
+    const result = await apply(store);
+    try {
+      await persist(store);
+      return result;
+    } catch (err) {
+      lastError = err;
+      const status = (err as { status?: number }).status;
+      if (status !== 409) throw new Error(friendlyGitHubError(err));
+      // 有其他人喺我哋寫入之前改咗個檔：下一輪重讀再套用同一個改動。
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("GitHub store 寫入衝突，請稍後再試");
 }
 
 export function persistenceMode(): "github" | "local-json" {
@@ -272,23 +297,23 @@ export async function addSubmission(input: EditablePatch & { submitterName?: str
   if (!owner) throw new Error("請填負責老師");
   return withLock(async () => {
     // 每次都重讀最新版本，確保唔會蓋咗平台上啱啱新增／修改嘅登記。
-    const store = await load();
-    const submission: ActivitySubmission = {
-      id: uid("sub"),
-      title,
-      dateOrWindow,
-      periods: asPeriods(input.periods, []),
-      venue: (input.venue ?? "").trim(),
-      audience: (input.audience ?? "").trim(),
-      owner,
-      hold: Boolean(input.hold),
-      notes: (input.notes ?? "").trim(),
-      track: (input.track ?? "").trim() || undefined,
-      submittedAt: new Date().toISOString(),
-      submitterName: input.submitterName?.trim() || undefined,
-    };
-    store.submissions.unshift(submission);
-    await persist(store);
-    return submission;
+    return mutate((store) => {
+      const submission: ActivitySubmission = {
+        id: uid("sub"),
+        title,
+        dateOrWindow,
+        periods: asPeriods(input.periods, []),
+        venue: (input.venue ?? "").trim(),
+        audience: (input.audience ?? "").trim(),
+        owner,
+        hold: Boolean(input.hold),
+        notes: (input.notes ?? "").trim(),
+        track: (input.track ?? "").trim() || undefined,
+        submittedAt: new Date().toISOString(),
+        submitterName: input.submitterName?.trim() || undefined,
+      };
+      store.submissions.unshift(submission);
+      return submission;
+    });
   });
 }
