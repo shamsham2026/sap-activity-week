@@ -205,6 +205,8 @@ export type EditablePatch = {
   venue?: string;
   audience?: string;
   owner?: string;
+  /** PDF 表格「科任、活動時長」入面嘅科任老師。 */
+  subjectTeachers?: string;
   hold?: boolean;
   notes?: string;
   track?: string;
@@ -222,6 +224,7 @@ export function mergeEntries(store: StoreShape): ActivityEntry[] {
     if (!rev) {
       return {
         ...seed,
+        subjectTeachers: "",
         source: "seed",
         revised: false,
       };
@@ -234,6 +237,7 @@ export function mergeEntries(store: StoreShape): ActivityEntry[] {
       venue: rev.venue,
       audience: rev.audience,
       owner: rev.owner,
+      subjectTeachers: rev.subjectTeachers ?? "",
       hold: rev.hold,
       notes: rev.notes,
       track: rev.track,
@@ -250,6 +254,7 @@ export function mergeEntries(store: StoreShape): ActivityEntry[] {
     venue: sub.venue ?? "",
     audience: sub.audience ?? "",
     owner: sub.owner ?? "",
+    subjectTeachers: sub.subjectTeachers ?? "",
     hold: Boolean(sub.hold),
     notes: sub.notes ?? "",
     track: sub.track ?? "",
@@ -306,6 +311,7 @@ export async function addSubmission(input: EditablePatch & { submitterName?: str
         venue: (input.venue ?? "").trim(),
         audience: (input.audience ?? "").trim(),
         owner,
+        subjectTeachers: (input.subjectTeachers ?? "").trim(),
         hold: Boolean(input.hold),
         notes: (input.notes ?? "").trim(),
         track: (input.track ?? "").trim() || undefined,

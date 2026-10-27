@@ -424,10 +424,12 @@ export type RegistrationCalendarMonth = {
   weeks: (RegistrationCalendarDay | null)[][];
 };
 
-/** Calendar heading. December and January share one first-term title. */
+/** Calendar heading. Keep 期考後 / 上學期 / 下學期 as three distinct titles. */
 export function registrationCalendarTitle(group: string): string {
-  if (group === "下學期活動週") return "下學期期考後活動週";
-  return "上學期期考後活動週";
+  if (group === "下學期活動週") return "下學期活動週";
+  if (group === "上學期活動週") return "上學期活動週";
+  if (group === "期考後時間表") return "上學期／期考後時間表";
+  return group;
 }
 
 /** Public calendar year. December stays 2026; January, June, and July are 2027. */

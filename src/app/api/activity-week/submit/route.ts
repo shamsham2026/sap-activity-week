@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     venue?: string;
     audience?: string;
     owner?: string;
+    subjectTeachers?: string;
     hold?: boolean;
     notes?: string;
     submitterName?: string;

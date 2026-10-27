@@ -8,22 +8,17 @@ import {
   type RegistrationCalendarMonth,
 } from "@/lib/activity-week-grid";
 import { revealFocusedField } from "@/lib/reveal-focused-field";
+import { AW_REG_WINDOW_LINES } from "@/lib/activity-week-reg";
+import {
+  FORM_INSTRUCTIONS,
+  SEM1_POST_EXAM_TABLE,
+  SEM2_POST_EXAM_TABLE,
+} from "@/lib/activity-week-schedule";
 import { ACTIVITY_WEEK_SEED } from "@/lib/activity-week-seed";
 import type { ConflictItem } from "@/lib/activity-week-types";
-
-const DURATION_OPTS = [
-  "30分鐘",
-  "45分鐘",
-  "60分鐘",
-  "90分鐘",
-  ...ACTIVITY_WEEK_SEED.periods.map((p) => p.name),
-  "全日",
-  "頭三節",
-];
-
-const VENUE_OPTS = ACTIVITY_WEEK_SEED.venues.map((v) =>
-  v.code ? `${v.code} ${v.name}` : v.name,
-);
+import { ActivityWeekTimetable } from "@/components/ActivityWeekTimetable";
+import { ActivityWeekFormTable } from "@/components/ActivityWeekFormTable";
+import { ScheduleTableView } from "@/components/ScheduleTableView";
 
 const WEEKDAY_HEADS = ["日", "一", "二", "三", "四", "五", "六"] as const;
 const REGISTRATION_CALENDARS: RegistrationCalendarMonth[] = registrationCalendars();
@@ -53,11 +48,14 @@ const EMPTY = {
   dateOrWindow: "",
   periods: "",
   venue: "",
+  grades: [] as string[],
+  classGroups: "",
   junior: false,
   senior: false,
   headcountOnly: false,
   headcount: "",
   owner: "",
+  subjectTeachers: "",
   hold: false,
   notes: "",
   submitterName: "",
@@ -123,6 +121,8 @@ export function ActivityWeekRegisterClient() {
       return;
     }
     let audience = "";
+    const gradePart = form.grades.join("、");
+    const classPart = form.classGroups.trim();
     if (form.headcountOnly) {
       const count = Number(form.headcount);
       if (!Number.isFinite(count) || count < 1) {
@@ -131,7 +131,14 @@ export function ActivityWeekRegisterClient() {
       }
       audience = `${Math.round(count)}人`;
     } else {
-      audience = [form.junior ? "初小" : "", form.senior ? "高小" : ""].filter(Boolean).join("、");
+      audience = [
+        gradePart,
+        classPart,
+        form.junior ? "初小" : "",
+        form.senior ? "高小" : "",
+      ]
+        .filter(Boolean)
+        .join("、");
     }
     setBusy(true);
     try {
@@ -145,6 +152,7 @@ export function ActivityWeekRegisterClient() {
           venue: form.venue.trim(),
           audience,
           owner: form.owner.trim(),
+          subjectTeachers: form.subjectTeachers.trim(),
           hold: form.hold,
           notes: form.notes.trim(),
           submitterName: form.submitterName.trim() || undefined,
@@ -175,13 +183,38 @@ export function ActivityWeekRegisterClient() {
 
   return (
     <div className="space-y-6">
-      <RegistrationCalendar
-        selected={dateValue}
-        onPick={(iso) => setForm((current) => ({ ...current, dateOrWindow: iso }))}
-      />
+      <div className="space-y-1 text-sm leading-relaxed text-[var(--brand-ink)]">
+        {AW_REG_WINDOW_LINES.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+      </div>
+
+      {/* 左右擺放：左邊係 PDF 時間表，右邊係揀日期月曆 */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="min-w-0 space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <ScheduleTableView table={SEM1_POST_EXAM_TABLE} />
+            <ScheduleTableView table={SEM2_POST_EXAM_TABLE} />
+          </div>
+          <ActivityWeekTimetable />
+        </div>
+        <div className="min-w-0">
+          <RegistrationCalendar
+            selected={dateValue}
+            onPick={(iso) => setForm((current) => ({ ...current, dateOrWindow: iso }))}
+          />
+        </div>
+      </div>
+
+      {/* PDF 第一頁底部：交表說明 */}
+      <section className="space-y-1 rounded-xl border border-[var(--brand-line)] bg-white px-3 py-2 text-xs leading-relaxed text-[var(--brand-ink)]">
+        {FORM_INSTRUCTIONS.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+      </section>
     <form
         id="aw-reg-form"
-        className="section-block grid min-w-0 max-w-full gap-3 sm:grid-cols-2"
+        className="section-block grid min-w-0 max-w-full gap-3"
         onSubmit={onSubmit}
         onFocus={(event: FocusEvent<HTMLFormElement>) => {
           const target = event.target;
@@ -190,179 +223,15 @@ export function ActivityWeekRegisterClient() {
           revealFocusedField(target);
         }}
       >
-        <label className="text-sm sm:col-span-2">
-          <span className="text-[var(--brand-muted)]">活動名稱 *</span>
-          <input
-            className="field mt-1 w-full"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            required
-          />
-        </label>
-        <div className="text-sm">
-          <span className="text-[var(--brand-muted)]">擬定日期 *</span>
-          <span className="relative mt-1 block">
-            <input
-              className="field w-full pr-12"
-              aria-label="擬定日期"
-              inputMode="text"
-              placeholder="例如 16-12-2026，或 16-12-2026至21-12-2026"
-              value={shownDate}
-              onChange={(e) => {
-                const typed = e.target.value;
-                setForm((f) => ({ ...f, dateOrWindow: singleDmyToIso(typed) ?? typed }));
-              }}
-              required
-            />
-            <input
-              className="absolute inset-y-0 right-0 w-11 cursor-pointer opacity-0"
-              type="date"
-              lang="en-GB"
-              aria-label="選擇日期"
-              value={dateValue}
-              onChange={(e) => setForm((f) => ({ ...f, dateOrWindow: e.target.value }))}
-            />
-            <span
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--brand-muted)]"
-              aria-hidden
-            >
-              選擇
-            </span>
-          </span>
-        </div>
-        <label className="text-sm">
-          <span className="text-[var(--brand-muted)]">活動時長</span>
-          <input
-            className="field mt-1 w-full"
-            list="aw-reg-duration-opts"
-            placeholder="例如 45分鐘、第1節、第2節 或 全日"
-            value={form.periods}
-            onChange={(e) => setForm((f) => ({ ...f, periods: e.target.value }))}
-          />
-          <datalist id="aw-reg-duration-opts">
-            {DURATION_OPTS.map((opt) => (
-              <option key={opt} value={opt} />
-            ))}
-          </datalist>
-        </label>
-        <label className="text-sm">
-          <span className="text-[var(--brand-muted)]">場地</span>
-          <input
-            className="field mt-1 w-full"
-            list="aw-reg-venue-opts"
-            value={form.venue}
-            onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))}
-          />
-          <datalist id="aw-reg-venue-opts">
-            {VENUE_OPTS.map((opt) => (
-              <option key={opt} value={opt} />
-            ))}
-          </datalist>
-        </label>
-        <fieldset className="text-sm">
-          <legend className="text-[var(--brand-muted)]">對象</legend>
-          <div className="mt-1 space-y-1.5">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[var(--brand-accent)]"
-                checked={form.junior}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    junior: e.target.checked,
-                    headcountOnly: e.target.checked ? false : f.headcountOnly,
-                    headcount: e.target.checked ? "" : f.headcount,
-                  }))
-                }
-              />
-              初小
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[var(--brand-accent)]"
-                checked={form.senior}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    senior: e.target.checked,
-                    headcountOnly: e.target.checked ? false : f.headcountOnly,
-                    headcount: e.target.checked ? "" : f.headcount,
-                  }))
-                }
-              />
-              高小
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-[var(--brand-accent)]"
-                checked={form.headcountOnly}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    headcountOnly: e.target.checked,
-                    junior: e.target.checked ? false : f.junior,
-                    senior: e.target.checked ? false : f.senior,
-                    headcount: e.target.checked ? f.headcount : "",
-                  }))
-                }
-              />
-              只需指定人數
-            </label>
-            {form.headcountOnly ? (
-              <label className="block pt-1">
-                <span className="text-[var(--brand-muted)]">人數</span>
-                <input
-                  className="field mt-1 w-full"
-                  type="number"
-                  min={1}
-                  inputMode="numeric"
-                  value={form.headcount}
-                  onChange={(e) => setForm((f) => ({ ...f, headcount: e.target.value }))}
-                  required
-                />
-              </label>
-            ) : null}
-          </div>
-        </fieldset>
-        <label className="text-sm">
-          <span className="text-[var(--brand-muted)]">負責老師 *</span>
-          <input
-            className="field mt-1 w-full"
-            value={form.owner}
-            onChange={(e) => setForm((f) => ({ ...f, owner: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="text-[var(--brand-muted)]">提交人（可選）</span>
-          <input
-            className="field mt-1 w-full"
-            value={form.submitterName}
-            onChange={(e) => setForm((f) => ({ ...f, submitterName: e.target.value }))}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm sm:col-span-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-[var(--brand-accent)]"
-            checked={form.hold}
-            onChange={(e) => setForm((f) => ({ ...f, hold: e.target.checked }))}
-          />
-          Hold 場地／時段
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="text-[var(--brand-muted)]">備註</span>
-          <textarea
-            className="field mt-1 min-h-[72px] w-full"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          />
-        </label>
+        <ActivityWeekFormTable
+          form={form}
+          setForm={setForm}
+          dateValue={dateValue}
+          shownDate={shownDate}
+          singleDmyToIso={singleDmyToIso}
+        />
         {showWarnings ? (
-          <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:col-span-2">
+          <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
             {warnings.conflicts.map((line) => (
               <p key={line}>{line}</p>
             ))}
@@ -376,11 +245,11 @@ export function ActivityWeekRegisterClient() {
             ))}
           </div>
         ) : null}
-        <div className="space-y-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-4 py-3 sm:col-span-2">
-          <p className="text-sm font-medium text-[var(--brand-ink)]">
+        <div className="space-y-1.5 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-2">
+          <p className="text-xs font-medium text-[var(--brand-ink)]">
             最終活動時間由沈美玉主任安排及通知，謝謝。
           </p>
-          <label className="flex items-start gap-2 text-sm">
+          <label className="flex items-start gap-2 text-xs">
             <input
               type="checkbox"
               className="mt-0.5 h-4 w-4 accent-[var(--brand-accent)]"
@@ -390,11 +259,9 @@ export function ActivityWeekRegisterClient() {
             <span>本人已閱讀並同意上述安排說明</span>
           </label>
         </div>
-        {error ? <p className="text-sm text-red-700 sm:col-span-2">{error}</p> : null}
-        {done ? (
-          <p className="text-sm font-medium text-emerald-700 sm:col-span-2">{done}</p>
-        ) : null}
-        <div className="sm:col-span-2">
+        {error ? <p className="text-xs text-red-700">{error}</p> : null}
+        {done ? <p className="text-xs font-medium text-emerald-700">{done}</p> : null}
+        <div>
           <button type="submit" className="btn-primary" disabled={busy || !agreed}>
             {busy ? "提交中…" : "提交登記"}
           </button>
