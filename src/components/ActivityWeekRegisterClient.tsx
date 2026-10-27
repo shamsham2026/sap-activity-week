@@ -189,15 +189,14 @@ export function ActivityWeekRegisterClient() {
         ))}
       </div>
 
-      {/* 左右擺放：左邊係 PDF 時間表，右邊係揀日期月曆 */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="min-w-0 space-y-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <ScheduleTableView table={SEM1_POST_EXAM_TABLE} />
-            <ScheduleTableView table={SEM2_POST_EXAM_TABLE} />
-          </div>
-          <ActivityWeekTimetable />
-        </div>
+      {/* 左右擺放：上面兩個 PDF 時間表並排，下面左時段表、右月曆 */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <ScheduleTableView table={SEM1_POST_EXAM_TABLE} />
+        <ScheduleTableView table={SEM2_POST_EXAM_TABLE} />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+        <ActivityWeekTimetable />
         <div className="min-w-0">
           <RegistrationCalendar
             selected={dateValue}
