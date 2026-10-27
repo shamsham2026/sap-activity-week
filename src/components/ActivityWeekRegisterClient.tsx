@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FocusEvent, type FormEvent } from "react";
 import { regWarnings, splitList } from "@/lib/activity-week-conflicts";
-import {
-  formatShownDate,
-  registrationCalendars,
-  type RegistrationCalendarMonth,
-} from "@/lib/activity-week-grid";
+import { formatShownDate } from "@/lib/activity-week-grid";
 import { revealFocusedField } from "@/lib/reveal-focused-field";
 import {
   FORM_INSTRUCTIONS,
@@ -19,8 +15,6 @@ import { ActivityWeekTimetable } from "@/components/ActivityWeekTimetable";
 import { ActivityWeekFormTable } from "@/components/ActivityWeekFormTable";
 import { ScheduleTableView } from "@/components/ScheduleTableView";
 
-const WEEKDAY_HEADS = ["日", "一", "二", "三", "四", "五", "六"] as const;
-const REGISTRATION_CALENDARS: RegistrationCalendarMonth[] = registrationCalendars();
 
 function singleDmyToIso(raw: string): string | null {
   const match = raw.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
@@ -182,20 +176,20 @@ export function ActivityWeekRegisterClient() {
 
   return (
     <div className="space-y-4">
-      {/* 左右擺放：上面兩個 PDF 時間表並排，下面左時段表、右月曆 */}
+      {/* PDF 第一頁：期考後時間表（上、下學期）左右擺放 */}
       <div className="grid gap-2 sm:grid-cols-2">
         <ScheduleTableView table={SEM1_POST_EXAM_TABLE} />
         <ScheduleTableView table={SEM2_POST_EXAM_TABLE} />
       </div>
 
+      {/* PDF 第一頁：活動週上課時段 */}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
         <ActivityWeekTimetable />
-        <div className="min-w-0">
-          <RegistrationCalendar
-            selected={dateValue}
-            onPick={(iso) => setForm((current) => ({ ...current, dateOrWindow: iso }))}
-          />
-        </div>
+        <section className="space-y-1 self-start rounded-xl border border-[var(--brand-line)] bg-white px-3 py-2 text-xs leading-relaxed text-[var(--brand-ink)]">
+          {FORM_INSTRUCTIONS.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </section>
       </div>
 
       {/* PDF 第一頁底部：交表說明 */}
@@ -259,75 +253,6 @@ export function ActivityWeekRegisterClient() {
           </button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function RegistrationCalendar({
-  selected,
-  onPick,
-}: {
-  selected: string;
-  onPick: (iso: string) => void;
-}) {
-  const groups: { title: string; months: RegistrationCalendarMonth[] }[] = [];
-  for (const month of REGISTRATION_CALENDARS) {
-    const last = groups[groups.length - 1];
-    if (last?.title === month.group) last.months.push(month);
-    else groups.push({ title: month.group, months: [month] });
-  }
-  return (
-    <div className="space-y-3">
-      {groups.map((group) => (
-        <section key={group.title} className="min-w-0">
-          <h2 className="mb-1 text-sm font-semibold leading-snug text-[var(--brand-ink)]">{group.title}</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {group.months.map((month) => (
-              <div
-                key={`${month.year}-${month.month}`}
-                className="min-w-0 rounded-xl border border-[var(--brand-line)] bg-white p-2 shadow-sm"
-              >
-                <p className="text-[11px] text-[var(--brand-muted)]">
-                  {`${month.year}年${month.month}月`}
-                </p>
-                <div className="mt-1 grid grid-cols-7 gap-0.5 text-center">
-                  {WEEKDAY_HEADS.map((name) => (
-                    <div key={name} className="text-[10px] leading-4 text-[var(--brand-muted)]">
-                      {name}
-                    </div>
-                  ))}
-                  {month.weeks.flatMap((week, weekIndex) =>
-                    week.map((day, weekday) =>
-                      day ? (
-                        <button
-                          key={day.date}
-                          type="button"
-                          aria-label={day.label}
-                          aria-pressed={selected === day.date}
-                          onClick={() => onPick(day.date)}
-                          className={`rounded-md py-1 text-xs font-semibold leading-none ${
-                            selected === day.date
-                              ? "bg-[var(--brand-accent)] text-white"
-                              : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"
-                          }`}
-                        >
-                          {Number(day.date.slice(8, 10))}
-                        </button>
-                      ) : (
-                        <div
-                          key={`${month.year}-${month.month}-${weekIndex}-${weekday}`}
-                          aria-hidden
-                          className="py-1"
-                        />
-                      ),
-                    ),
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
     </div>
   );
 }
