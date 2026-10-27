@@ -183,14 +183,7 @@ export function ActivityWeekRegisterClient() {
       </div>
 
       {/* PDF 第一頁：活動週上課時段 */}
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-        <ActivityWeekTimetable />
-        <section className="space-y-1 self-start rounded-xl border border-[var(--brand-line)] bg-white px-3 py-2 text-xs leading-relaxed text-[var(--brand-ink)]">
-          {FORM_INSTRUCTIONS.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-        </section>
-      </div>
+      <ActivityWeekTimetable />
 
       {/* PDF 第一頁底部：交表說明 */}
       <section className="space-y-1 rounded-xl border border-[var(--brand-line)] bg-white px-3 py-2 text-xs leading-relaxed text-[var(--brand-ink)]">
