@@ -8,7 +8,6 @@ import {
   type RegistrationCalendarMonth,
 } from "@/lib/activity-week-grid";
 import { revealFocusedField } from "@/lib/reveal-focused-field";
-import { AW_REG_WINDOW_LINES } from "@/lib/activity-week-reg";
 import {
   FORM_INSTRUCTIONS,
   SEM1_POST_EXAM_TABLE,
@@ -182,13 +181,7 @@ export function ActivityWeekRegisterClient() {
     : form.dateOrWindow;
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1 text-sm leading-relaxed text-[var(--brand-ink)]">
-        {AW_REG_WINDOW_LINES.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-      </div>
-
+    <div className="space-y-4">
       {/* 左右擺放：上面兩個 PDF 時間表並排，下面左時段表、右月曆 */}
       <div className="grid gap-2 sm:grid-cols-2">
         <ScheduleTableView table={SEM1_POST_EXAM_TABLE} />
