@@ -22,11 +22,32 @@ const cell = (date: string | undefined, ...items: string[]): ScheduleCell => ({
   items,
 });
 
+/**
+ * PDF 度有啲活動寫喺獨立一行、冇日期，跟返上面嗰行嘅日期。
+ * 呢度將嗰啲冇日期嘅行摺入上一行，令日期同活動留喺同一格。
+ */
+function foldDateLessRows(rows: ScheduleCell[][]): ScheduleCell[][] {
+  const out: ScheduleCell[][] = [];
+  for (const row of rows) {
+    const hasDate = row.some((c) => Boolean(c.date));
+    if (!hasDate && out.length) {
+      const prev = out[out.length - 1];
+      for (let i = 0; i < prev.length; i += 1) {
+        const extra = row[i]?.items ?? [];
+        if (extra.length) prev[i].items = [...prev[i].items, ...extra];
+      }
+      continue;
+    }
+    out.push(row.map((c) => ({ ...c, items: [...c.items] })));
+  }
+  return out;
+}
+
 /** 上學期期考後時間表：16-18/12 核卷、21-22/12、4-8/1 活動週。 */
 export const SEM1_POST_EXAM_TABLE: ScheduleTable = {
   title: "上學期期考後時間表",
   columns: WEEKDAYS,
-  rows: [
+  rows: foldDateLessRows([
     [cell(undefined), cell(undefined), cell("16/12", "核卷"), cell("17/12", "核卷"), cell("18/12", "核卷")],
     [cell("21/12", "學習活動"), cell("22/12", "聖誕聯歡"), cell(undefined), cell(undefined), cell(undefined)],
     [
@@ -37,16 +58,16 @@ export const SEM1_POST_EXAM_TABLE: ScheduleTable = {
       cell("8/1", "嘉年華"),
     ],
     [cell(undefined), cell(undefined, "拍攝"), cell(undefined, "拍攝"), cell(undefined, "綵排"), cell(undefined, "綵排")],
-  ],
+  ]),
 };
 
 /** 下學期期考後時間表：16/6 開始，畢業禮綵排、嘉年華、結業禮。 */
 export const SEM2_POST_EXAM_TABLE: ScheduleTable = {
   title: "下學期期考後時間表",
   columns: WEEKDAYS,
-  rows: [
+  rows: foldDateLessRows([
     [cell(undefined), cell(undefined), cell("16/6"), cell("17/6"), cell("18/6")],
-    [cell("21/6"), cell("22/6"), cell("23/6"), cell("24/6"), cell("25/6", "P.4父(母)會")],
+    [cell("21/6"), cell("22/6"), cell("23/6"), cell("24/6"), cell("25/6", "P.4交流")],
     [cell("28/6"), cell("29/6"), cell("30/6"), cell(undefined), cell("2/7")],
     [
       cell(undefined, "畢業禮", "綵排"),
@@ -56,8 +77,8 @@ export const SEM2_POST_EXAM_TABLE: ScheduleTable = {
       cell(undefined, "畢業禮", "綵排"),
     ],
     [cell("5/7"), cell("6/7"), cell("7/7"), cell("8/7"), cell("9/7")],
-    [cell(undefined), cell(undefined, "放榜日/", "P.5交流"), cell(undefined), cell(undefined), cell(undefined, "結業禮")],
-  ],
+    [cell(undefined), cell(undefined, "放榜日", "P.5交流"), cell(undefined), cell(undefined), cell(undefined, "結業禮")],
+  ]),
 };
 
 export type PeriodRow = {

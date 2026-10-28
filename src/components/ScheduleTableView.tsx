@@ -4,8 +4,8 @@ import type { ScheduleTable } from "@/lib/activity-week-schedule";
 
 /**
  * PDF 第一頁嗰兩個時間表。
- * 每格上面係日期，下面係當日活動；空白格代表 PDF 度冇寫嘢。
- * 細格版：淨係睇到大約時間，唔佔咗好多位。
+ * 每格入面日期同活動寫埋一格一行；空白格代表 PDF 度冇寫嘢。
+ * 五欄平均闊，唔會因為內容長短歪咗。
  */
 export function ScheduleTableView({ table }: { table: ScheduleTable }) {
   return (
@@ -17,7 +17,12 @@ export function ScheduleTableView({ table }: { table: ScheduleTable }) {
         {table.title}
       </h2>
       <div className="-mx-0.5 overflow-x-auto px-0.5">
-        <table className="w-full min-w-[22rem] border-collapse text-[11px]">
+        <table className="w-full min-w-[26rem] table-fixed border-collapse text-[11px]">
+          <colgroup>
+            {table.columns.map((col) => (
+              <col key={col} style={{ width: `${100 / table.columns.length}%` }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
               {table.columns.map((col) => (
@@ -37,18 +42,17 @@ export function ScheduleTableView({ table }: { table: ScheduleTable }) {
                 {row.map((cell, cellIndex) => (
                   <td
                     key={cellIndex}
-                    className="border border-[var(--brand-line)] px-1 py-0.5 align-top leading-tight"
+                    className="border border-[var(--brand-line)] px-1 py-0.5 align-middle leading-tight"
                   >
-                    {cell.date ? (
-                      <div className="text-center font-semibold text-[var(--brand-ink)]">
-                        {cell.date}
-                      </div>
-                    ) : null}
-                    {cell.items.length ? (
-                      <div className="mt-0.5 text-center text-[var(--brand-ink)]">
-                        {cell.items.join("、")}
-                      </div>
-                    ) : null}
+                    <div className="text-center break-words text-[var(--brand-ink)]">
+                      {cell.date ? (
+                        <span className="font-semibold">{cell.date}</span>
+                      ) : null}
+                      {cell.date && cell.items.length ? (
+                        <span className="mx-0.5">·</span>
+                      ) : null}
+                      {cell.items.length ? <span>{cell.items.join(" ")}</span> : null}
+                    </div>
                   </td>
                 ))}
               </tr>
