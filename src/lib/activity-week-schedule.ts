@@ -43,9 +43,9 @@ function foldDateLessRows(rows: ScheduleCell[][]): ScheduleCell[][] {
   return out;
 }
 
-/** 上學期期考後時間表：16-18/12 核卷、21-22/12、4-8/1 活動週。 */
+/** 上學期期考後活動安排：16-18/12 核卷、21-22/12、4-8/1 活動週。 */
 export const SEM1_POST_EXAM_TABLE: ScheduleTable = {
-  title: "上學期期考後時間表",
+  title: "上學期期考後活動安排",
   columns: WEEKDAYS,
   rows: foldDateLessRows([
     [cell(undefined), cell(undefined), cell("16/12", "核卷"), cell("17/12", "核卷"), cell("18/12", "核卷")],
@@ -61,9 +61,9 @@ export const SEM1_POST_EXAM_TABLE: ScheduleTable = {
   ]),
 };
 
-/** 下學期期考後時間表：16/6 開始，畢業禮綵排、嘉年華、結業禮。 */
+/** 下學期期考後活動安排：16/6 開始，畢業禮綵排、嘉年華、結業禮。 */
 export const SEM2_POST_EXAM_TABLE: ScheduleTable = {
-  title: "下學期期考後時間表",
+  title: "下學期期考後活動安排",
   columns: WEEKDAYS,
   rows: foldDateLessRows([
     [cell(undefined), cell(undefined), cell("16/6"), cell("17/6"), cell("18/6")],
