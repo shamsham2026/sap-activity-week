@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState, type FocusEvent, type FormEvent } from "react";
 import { regWarnings, splitList } from "@/lib/activity-week-conflicts";
-import { formatShownDate } from "@/lib/activity-week-grid";
+import {
+  formatShownDate,
+  registrationDateOptions,
+  type RegistrationDateOption,
+} from "@/lib/activity-week-grid";
 import { revealFocusedField } from "@/lib/reveal-focused-field";
 import {
   FORM_INSTRUCTIONS,
@@ -16,20 +20,6 @@ import { ActivityWeekFormTable } from "@/components/ActivityWeekFormTable";
 import { ScheduleTableView } from "@/components/ScheduleTableView";
 
 
-function singleDmyToIso(raw: string): string | null {
-  const match = raw.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  const dt = new Date(Date.UTC(year, month - 1, day));
-  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
-    return null;
-  }
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
 function shownConstraint(line: string): string {
   const splitAt = line.indexOf("：");
   if (splitAt < 0) return line;
@@ -38,7 +28,7 @@ function shownConstraint(line: string): string {
 
 const EMPTY = {
   title: "",
-  dateOrWindow: "",
+  dates: [] as string[],
   periods: "",
   venue: "",
   grades: [] as string[],
@@ -99,8 +89,8 @@ export function ActivityWeekRegisterClient() {
   }, [load]);
 
   const warnings = useMemo(
-    () => regWarnings(form.dateOrWindow, known, form.venue, form.periods),
-    [form.dateOrWindow, form.venue, form.periods, known],
+    () => regWarnings(form.dates.join("、"), known, form.venue, form.periods),
+    [form.dates, form.venue, form.periods, known],
   );
   const showWarnings =
     warnings.conflicts.length > 0 || warnings.hallFull || warnings.constraints.length > 0;
@@ -111,6 +101,10 @@ export function ActivityWeekRegisterClient() {
     setDone(null);
     if (!agreed) {
       setError("請先確認免責聲明");
+      return;
+    }
+    if (!form.dates.length) {
+      setError("請至少揀一個日期");
       return;
     }
     let audience = "";
@@ -140,7 +134,7 @@ export function ActivityWeekRegisterClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: form.title.trim(),
-          dateOrWindow: form.dateOrWindow.trim(),
+          dateOrWindow: form.dates.join("、"),
           periods: splitList(form.periods),
           venue: form.venue.trim(),
           audience,
@@ -167,12 +161,7 @@ export function ActivityWeekRegisterClient() {
     }
   }
 
-  const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(form.dateOrWindow)
-    ? form.dateOrWindow
-    : (singleDmyToIso(form.dateOrWindow) ?? "");
-  const shownDate = /^\d{4}-\d{2}-\d{2}$/.test(form.dateOrWindow)
-    ? formatShownDate(form.dateOrWindow)
-    : form.dateOrWindow;
+  const dateOptions: RegistrationDateOption[] = useMemo(() => registrationDateOptions(), []);
 
   return (
     <div className="space-y-4">
@@ -205,9 +194,7 @@ export function ActivityWeekRegisterClient() {
         <ActivityWeekFormTable
           form={form}
           setForm={setForm}
-          dateValue={dateValue}
-          shownDate={shownDate}
-          singleDmyToIso={singleDmyToIso}
+          dateOptions={dateOptions}
         />
         {showWarnings ? (
           <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">

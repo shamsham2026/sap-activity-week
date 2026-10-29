@@ -3,10 +3,12 @@
 import type { Dispatch, SetStateAction } from "react";
 import { FORM_EXAMPLE, FORM_SECTION_LABELS } from "@/lib/activity-week-schedule";
 import { ACTIVITY_WEEK_SEED } from "@/lib/activity-week-seed";
+import type { RegistrationDateOption } from "@/lib/activity-week-grid";
 
 export type ActivityWeekForm = {
   title: string;
-  dateOrWindow: string;
+  /** 已揀選嘅登記日期（ISO），可以揀多日。 */
+  dates: string[];
   periods: string;
   venue: string;
   grades: string[];
@@ -53,16 +55,19 @@ const LABEL = "block text-[11px] leading-tight text-[var(--brand-muted)]";
 export function ActivityWeekFormTable({
   form,
   setForm,
-  dateValue,
-  shownDate,
-  singleDmyToIso,
+  dateOptions,
 }: {
   form: ActivityWeekForm;
   setForm: Dispatch<SetStateAction<ActivityWeekForm>>;
-  dateValue: string;
-  shownDate: string;
-  singleDmyToIso: (raw: string) => string | null;
+  dateOptions: RegistrationDateOption[];
 }) {
+  const groups: { title: string; days: RegistrationDateOption[] }[] = [];
+  for (const option of dateOptions) {
+    const last = groups[groups.length - 1];
+    if (last?.title === option.group) last.days.push(option);
+    else groups.push({ title: option.group, days: [option] });
+  }
+
   return (
     <div className="space-y-2.5">
       {/* 表格頂部三格：提交方式、科組／其他、聯絡教師 */}
@@ -243,40 +248,59 @@ export function ActivityWeekFormTable({
           ) : null}
         </div>
 
-        {/* 日期（如需指定） */}
-        <div className="rounded-lg border border-[var(--brand-line)] bg-white p-2">
-          <span className={LABEL}>日期（如需指定）*</span>
-          <span className="relative mt-1 block">
-            <input
-              className="field w-full pr-11"
-              aria-label="擬定日期"
-              inputMode="text"
-              placeholder="16-12-2026"
-              value={shownDate}
-              onChange={(e) => {
-                const typed = e.target.value;
-                setForm((f) => ({
-                  ...f,
-                  dateOrWindow: singleDmyToIso(typed) ?? typed,
-                }));
-              }}
-              required
-            />
-            <input
-              className="absolute inset-y-0 right-0 w-10 cursor-pointer opacity-0"
-              type="date"
-              lang="en-GB"
-              aria-label="選擇日期"
-              value={dateValue}
-              onChange={(e) => setForm((f) => ({ ...f, dateOrWindow: e.target.value }))}
-            />
-            <span
-              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[var(--brand-muted)]"
-              aria-hidden
-            >
-              選擇
-            </span>
-          </span>
+        {/* 日期（如需指定）：checkbox 點選，可以揀多日 */}
+        <div className="rounded-lg border border-[var(--brand-line)] bg-white p-2 md:col-span-2">
+          <span className={LABEL}>日期（如需指定）*（可揀多日）</span>
+          <div className="mt-1 space-y-2">
+            {groups.map((group) => (
+              <div key={group.title}>
+                <p className="text-[11px] font-semibold text-[var(--brand-ink)]">
+                  {group.title}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {group.days.map((day) => {
+                    const checked = form.dates.includes(day.date);
+                    return (
+                      <label
+                        key={day.date}
+                        className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] ${
+                          checked
+                            ? "border-[var(--brand-accent)] bg-[var(--brand-accent)] text-white"
+                            : "border-[var(--brand-line)] bg-white text-[var(--brand-ink)]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={checked}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              dates: e.target.checked
+                                ? [...f.dates, day.date].sort()
+                                : f.dates.filter((d) => d !== day.date),
+                            }))
+                          }
+                        />
+                        {day.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          {form.dates.length ? (
+            <p className="mt-1.5 text-[11px] text-[var(--brand-muted)]">
+              已揀：
+              {form.dates
+                .map((d) => {
+                  const found = dateOptions.find((o) => o.date === d);
+                  return found ? found.label : d;
+                })
+                .join("、")}
+            </p>
+          ) : null}
         </div>
 
         {/* 地點（如需指定） */}
