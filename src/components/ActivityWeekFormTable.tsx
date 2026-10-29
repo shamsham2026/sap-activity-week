@@ -250,20 +250,20 @@ export function ActivityWeekFormTable({
 
         {/* 日期（如需指定）：checkbox 點選，可以揀多日 */}
         <div className="rounded-lg border border-[var(--brand-line)] bg-white p-2 md:col-span-2">
-          <span className={LABEL}>日期（如需指定）*（可揀多日）</span>
+          <span className={LABEL}>日期（如需指定）*（可揀多日，剔中格仔）</span>
           <div className="mt-1 space-y-2">
             {groups.map((group) => (
               <div key={group.title}>
                 <p className="text-[11px] font-semibold text-[var(--brand-ink)]">
                   {group.title}
                 </p>
-                <div className="mt-1 flex flex-wrap gap-1.5">
+                <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
                   {group.days.map((day) => {
                     const checked = form.dates.includes(day.date);
                     return (
                       <label
                         key={day.date}
-                        className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] ${
+                        className={`flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1 text-[11px] ${
                           checked
                             ? "border-[var(--brand-accent)] bg-[var(--brand-accent)] text-white"
                             : "border-[var(--brand-line)] bg-white text-[var(--brand-ink)]"
@@ -271,7 +271,7 @@ export function ActivityWeekFormTable({
                       >
                         <input
                           type="checkbox"
-                          className="sr-only"
+                          className="h-4 w-4 shrink-0 accent-[var(--brand-accent)]"
                           checked={checked}
                           onChange={(e) =>
                             setForm((f) => ({
@@ -282,7 +282,7 @@ export function ActivityWeekFormTable({
                             }))
                           }
                         />
-                        {day.label}
+                        <span>{day.label}</span>
                       </label>
                     );
                   })}
