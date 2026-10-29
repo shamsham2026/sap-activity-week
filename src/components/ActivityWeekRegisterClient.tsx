@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FocusEvent, type FormEvent } from "react";
-import { regWarnings, splitList } from "@/lib/activity-week-conflicts";
+import { regWarnings } from "@/lib/activity-week-conflicts";
 import {
   formatShownDate,
   registrationDateOptions,
@@ -27,9 +27,9 @@ function shownConstraint(line: string): string {
 }
 
 const EMPTY = {
-  title: "",
+    title: "",
   dates: [] as string[],
-  periods: "",
+  periods: [] as string[],
   venue: "",
   grades: [] as string[],
   classGroups: "",
@@ -135,7 +135,7 @@ export function ActivityWeekRegisterClient() {
         body: JSON.stringify({
           title: form.title.trim(),
           dateOrWindow: form.dates.join("、"),
-          periods: splitList(form.periods),
+          periods: form.periods,
           venue: form.venue.trim(),
           audience,
           owner: form.owner.trim(),

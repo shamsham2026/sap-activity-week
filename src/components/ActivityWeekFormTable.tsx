@@ -9,7 +9,8 @@ export type ActivityWeekForm = {
   title: string;
   /** 已揀選嘅登記日期（ISO），可以揀多日。 */
   dates: string[];
-  periods: string;
+  /** 已揀選嘅活動時長／課節，可以揀多個。 */
+  periods: string[];
   venue: string;
   grades: string[];
   classGroups: string;
@@ -34,12 +35,15 @@ export const GRADE_OPTIONS = [
   { code: "P.6", band: "senior" },
 ] as const;
 
+/** 活動時長選項：分鐘、課節、全日。小息唔算活動時段，唔列入。 */
 const DURATION_OPTS = [
   "30分鐘",
   "45分鐘",
   "60分鐘",
   "90分鐘",
-  ...ACTIVITY_WEEK_SEED.periods.map((p) => p.name),
+  ...ACTIVITY_WEEK_SEED.periods
+    .map((p) => p.name)
+    .filter((name) => !name.includes("小息")),
   "全日",
   "頭三節",
 ];
@@ -332,20 +336,40 @@ export function ActivityWeekFormTable({
               value={form.subjectTeachers}
               onChange={(e) => setForm((f) => ({ ...f, subjectTeachers: e.target.value }))}
             />
-            <input
-              className={BOX}
-              aria-label="活動時長"
-              list="aw-reg-duration-opts"
-              placeholder="例如 45分鐘 或 全日"
-              value={form.periods}
-              onChange={(e) => setForm((f) => ({ ...f, periods: e.target.value }))}
-            />
           </div>
-          <datalist id="aw-reg-duration-opts">
-            {DURATION_OPTS.map((opt) => (
-              <option key={opt} value={opt} />
-            ))}
-          </datalist>
+          <span className="mt-1.5 block text-[11px] leading-tight text-[var(--brand-muted)]">
+            活動時長（可揀多項，剔中格仔）
+          </span>
+          <div className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-3">
+            {DURATION_OPTS.map((opt) => {
+              const checked = form.periods.includes(opt);
+              return (
+                <label
+                  key={opt}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1 text-[11px] ${
+                    checked
+                      ? "border-[var(--brand-accent)] bg-[var(--brand-accent)] text-white"
+                      : "border-[var(--brand-line)] bg-white text-[var(--brand-ink)]"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 shrink-0 accent-[var(--brand-accent)]"
+                    checked={checked}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        periods: e.target.checked
+                          ? [...f.periods, opt]
+                          : f.periods.filter((p) => p !== opt),
+                      }))
+                    }
+                  />
+                  <span>{opt}</span>
+                </label>
+              );
+            })}
+          </div>
         </div>
 
         {/* 備註 */}
